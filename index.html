@@ -3,16 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>야추 다이스 v3.2</title>
+    <title>야추 다이스 v3.3 (Flat Design)</title>
     <style>
         :root {
             --die-size: 60px;
             --pip-size: 13px;
-            --bg-color: #2c3e50; /* 기본 배경 */
-            --cheat-bg-color: #000000; /* 치트 배경 */
+            --bg-color: #2c3e50;
+            --cheat-bg-color: #222222;
             --hold-color: #e74c3c;
             --accent-color: #f1c40f;
             --bonus-color: #2ecc71;
+            /* 버튼 컬러 변수 */
+            --btn-normal: #f39c12;
+            --btn-cheat: #e74c3c;
+            --btn-restart: #27ae60;
+            --btn-disabled: #95a5a6;
         }
         body { 
             font-family: 'Apple SD Gothic Neo', sans-serif; 
@@ -20,7 +25,7 @@
             color: white; 
             display: flex; flex-direction: column; align-items: center; 
             min-height: 100vh; margin: 0; padding-bottom: 50px; 
-            transition: background-color 1s ease; /* 배경색 변경 애니메이션 */
+            transition: background-color 1s ease;
         }
         h1 { margin-top: 20px; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
         
@@ -32,7 +37,7 @@
             box-shadow: inset 0 0 5px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.2);
             border: 4px solid transparent; cursor: pointer; user-select: none;
             display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
-            padding: 4px; box-sizing: border-box; transition: transform 0.15s, border-color 0.2s;
+            padding: 4px; box-sizing: border-box; transition: border-color 0.2s; /* transform 제거됨 */
         }
         .pip { background-color: #333; border-radius: 50%; width: var(--pip-size); height: var(--pip-size); align-self: center; justify-self: center; opacity: 0; transition: opacity 0.1s; }
         
@@ -47,7 +52,14 @@
         .face-5 .top-left, .face-5 .top-right, .face-5 .center, .face-5 .bot-left, .face-5 .bot-right { opacity: 1; }
         .face-6 .top-left, .face-6 .top-right, .face-6 .mid-left, .face-6 .mid-right, .face-6 .bot-left, .face-6 .bot-right { opacity: 1; }
 
-        .die-face.held { border-color: var(--hold-color); background-color: #ecf0f1; transform: translateY(-8px); box-shadow: 0 10px 15px rgba(0,0,0,0.3); }
+        /* 주사위 선택 상태 (수정됨: 위로 뜨는 효과 제거) */
+        .die-face.held { 
+            border-color: var(--hold-color); 
+            background-color: #ecf0f1; 
+            /* transform 제거하여 위치 고정 */
+            transform: none !important; 
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.1); /* 그림자도 차분하게 */
+        }
         .die-number { font-weight: bold; color: #ecf0f1; font-size: 15px; }
         @keyframes shake { 0% { transform: rotate(0deg); } 25% { transform: rotate(10deg); } 50% { transform: rotate(-10deg); } 75% { transform: rotate(10deg); } 100% { transform: rotate(0deg); } }
         .die-face.rolling { animation: shake 0.2s infinite linear; }
@@ -59,24 +71,66 @@
         }
         .mini-pip { background-color: #7f8c8d; width: 4px; height: 4px; border-radius: 50%; align-self: center; justify-self: center; }
 
-        /* --- 컨트롤 --- */
+        /* --- 컨트롤 (버튼 스타일 수정됨) --- */
         .controls { margin-bottom: 20px; text-align: center; }
+        
         button#roll-btn {
-            padding: 12px 35px; font-size: 20px; cursor: pointer; background-color: #f39c12; border: none; border-radius: 50px; color: white;
-            box-shadow: 0 5px #d35400; transition: all 0.1s; font-weight: bold; min-width: 200px;
+            padding: 12px 35px; font-size: 20px; cursor: pointer; 
+            border-radius: 50px; font-weight: bold; min-width: 200px;
+            
+            /* 플랫 디자인 기본 설정 */
+            background-color: transparent;
+            border: 2px solid var(--btn-normal);
+            color: var(--btn-normal);
+            box-shadow: none; /* 그림자 제거 */
+            transition: all 0.3s ease; /* 부드러운 전환 */
         }
-        button#roll-btn:active { transform: translateY(3px); box-shadow: 0 2px #d35400; }
-        button#roll-btn:disabled { background-color: #95a5a6; cursor: not-allowed; box-shadow: none; }
+
+        /* 호버 시 채워지는 효과 */
+        button#roll-btn:hover:not(:disabled) {
+            background-color: var(--btn-normal);
+            color: white;
+        }
+
+        /* 클릭 시 살짝 눌림 (transform만 유지) */
+        button#roll-btn:active { transform: scale(0.98); }
+
+        /* 비활성화 상태 */
+        button#roll-btn:disabled { 
+            border-color: var(--btn-disabled);
+            color: var(--btn-disabled);
+            background-color: transparent;
+            cursor: not-allowed; 
+        }
+
+        /* 버튼 상태별 컬러 클래스 (JS에서 제어) */
+        button#roll-btn.btn-cheat {
+            border-color: var(--btn-cheat);
+            color: var(--btn-cheat);
+        }
+        button#roll-btn.btn-cheat:hover:not(:disabled) {
+            background-color: var(--btn-cheat);
+            color: white;
+        }
+
+        button#roll-btn.btn-restart {
+            border-color: var(--btn-restart);
+            color: var(--btn-restart);
+        }
+        button#roll-btn.btn-restart:hover:not(:disabled) {
+            background-color: var(--btn-restart);
+            color: white;
+        }
+
+
         .info { margin-top: 15px; font-size: 17px; color: #bdc3c7; }
         #rolls-left { color: var(--accent-color); font-weight: bold; font-size: 22px; margin-left: 5px;}
 
         /* --- 점수판 (테이블) --- */
         table { border-collapse: separate; border-spacing: 0; width: 380px; background-color: white; color: #2c3e50; border-radius: 12px; overflow: visible; box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin-bottom: 20px; }
-        
         tr { height: 48px; }
         th, td { padding: 0 15px; text-align: center; border-bottom: 1px solid #eee; vertical-align: middle; }
         th { background-color: #34495e; color: white; font-weight: normal; letter-spacing: 1px; height: 40px; }
-        
         td.category { text-align: left; font-weight: 600; font-size: 15px; display: flex; align-items: center; height: 48px; position: relative; cursor: default; }
         
         .score-btn { 
@@ -89,33 +143,20 @@
         .score-btn:hover:not(:disabled) { background-color: #e1e8ed; border-color: #3498db; color: #3498db; }
         .score-filled { font-weight: 800; color: #2c3e50; font-size: 18px; }
 
-        /* 상단 합계 (프로그레스바) */
-        .subtotal-row td {
-            border-top: 2px solid #bdc3c7; border-bottom: 2px solid #bdc3c7; 
-            font-weight: bold; font-size: 14px; color: #7f8c8d;
-            background-color: transparent !important; 
-        }
+        /* 상단 합계 */
+        .subtotal-row td { border-top: 2px solid #bdc3c7; border-bottom: 2px solid #bdc3c7; font-weight: bold; font-size: 14px; color: #7f8c8d; background-color: transparent !important; }
         .subtotal-row { background-color: #f8f9fa; transition: background 0.3s ease; }
 
-        /* 보너스 달성 애니메이션 */
-        @keyframes bonusPulse {
-            0% { background-color: #2ecc71; transform: scale(1); }
-            50% { background-color: #27ae60; transform: scale(1.02); }
-            100% { background-color: #2ecc71; transform: scale(1); }
-        }
+        @keyframes bonusPulse { 0% { background-color: #2ecc71; transform: scale(1); } 50% { background-color: #27ae60; transform: scale(1.02); } 100% { background-color: #2ecc71; transform: scale(1); } }
         .bonus-achieved td { color: white !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); border-color: #27ae60 !important; }
         .bonus-achieved { animation: bonusPulse 2s infinite; }
 
         /* 툴팁 */
         td.category[data-desc]:hover::after {
-            content: attr(data-desc);
-            position: absolute; left: 10px; bottom: 40px; 
-            background-color: rgba(0, 0, 0, 0.9); color: white;
-            padding: 8px 12px; border-radius: 6px;
-            font-size: 13px; font-weight: normal; white-space: nowrap;
-            z-index: 100; pointer-events: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            opacity: 0; animation: fadeIn 0.2s forwards;
+            content: attr(data-desc); position: absolute; left: 10px; bottom: 40px; 
+            background-color: rgba(0, 0, 0, 0.9); color: white; padding: 8px 12px; border-radius: 6px;
+            font-size: 13px; font-weight: normal; white-space: nowrap; z-index: 100; pointer-events: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); opacity: 0; animation: fadeIn 0.2s forwards;
         }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -126,11 +167,8 @@
         .restart-btn { background: transparent; border: 1px solid #7f8c8d; color: #95a5a6; padding: 8px 16px; border-radius: 20px; cursor: pointer; margin-top: 10px; }
         .restart-btn:hover { background: #e74c3c; border-color: #e74c3c; color: white; }
 
-        /* 치트 트리거 (양심에 찔리기) */
-        .cheat-trigger {
-            margin-top: 20px; font-size: 11px; color: #444; 
-            cursor: pointer; text-decoration: none; opacity: 0.5; transition: opacity 0.3s;
-        }
+        /* 치트 트리거 */
+        .cheat-trigger { margin-top: 20px; font-size: 11px; color: #444; cursor: pointer; text-decoration: none; opacity: 0.5; transition: opacity 0.3s; }
         .cheat-trigger:hover { opacity: 1; color: #e74c3c; font-weight: bold; }
 
     </style>
@@ -169,8 +207,6 @@
         let scores = {};
         let isRolling = false; 
         let animationInterval = null;
-        
-        // 치트 모드 상태 변수
         let isCheatMode = false;
 
         const categories = [
@@ -193,18 +229,17 @@
             scores = {};
             isRolling = false;
             
-            // 치트 모드 초기화 (게임 재시작 시 정상으로 복구)
             isCheatMode = false;
             document.body.style.backgroundColor = "var(--bg-color)";
             document.getElementById('game-title').innerText = "🎲 야추 다이스";
-            document.getElementById('cheat-trigger').style.display = 'block'; // 버튼 다시 보이기
+            document.getElementById('cheat-trigger').style.display = 'block';
 
-            // 버튼 상태 초기화
             const rollBtn = document.getElementById('roll-btn');
             rollBtn.innerText = "주사위 굴리기!";
             rollBtn.disabled = false;
             rollBtn.onclick = startRollAnimation;
-            rollBtn.style.backgroundColor = "#f39c12";
+            // 클래스 초기화 (기본 스타일로 복구)
+            rollBtn.classList.remove('btn-cheat', 'btn-restart');
 
             createDiceElements(); 
             createScoreTable();   
@@ -212,16 +247,14 @@
             updateTotalScore(); 
         }
 
-        // --- 치트 모드 활성화 함수 ---
         function activateCheatMode() {
             if (isCheatMode) return;
             if (!confirm("정말 양심을 버리시겠습니까?\n이 모드에서는 주사위를 무한으로 굴릴 수 있습니다.\n(다시는 되돌릴 수 없습니다!)")) return;
             
             isCheatMode = true;
-            document.body.style.backgroundColor = "var(--cheat-bg-color)"; // 배경 변경 (#222222)
-            document.getElementById('cheat-trigger').style.display = 'none'; // 트리거 숨김
+            document.body.style.backgroundColor = "var(--cheat-bg-color)";
+            document.getElementById('cheat-trigger').style.display = 'none';
             document.getElementById('game-title').innerText = "😈 타락한 야추 다이스";
-            
             updateUIState();
         }
 
@@ -304,17 +337,13 @@
         }
 
         function startRollAnimation() {
-            // 치트 모드일 땐 횟수 제한 없음, 일반 모드일 땐 0이면 불가
             if (isRolling) return;
             if (!isCheatMode && rollsLeft <= 0) return;
 
             isRolling = true;
             document.getElementById('roll-btn').disabled = true;
             
-            // 치트 모드가 아닐 때만 횟수 차감
-            if (!isCheatMode) {
-                rollsLeft--;
-            }
+            if (!isCheatMode) rollsLeft--;
 
             updateUIState();
             updateScorePreview(true); 
@@ -334,21 +363,16 @@
             });
             renderDiceVisuals(); updateScorePreview(false); isRolling = false;
             
-            // 굴리기 완료 후 버튼 활성화 로직
             const rollBtn = document.getElementById('roll-btn');
             if (isCheatMode || rollsLeft > 0) {
                 rollBtn.disabled = false;
             } else {
-                rollBtn.disabled = true; // 일반 모드이고 0회면 비활성
+                rollBtn.disabled = true; 
             }
         }
 
         function toggleHold(index) {
-            // 아직 한 번도 안 굴렸으면 홀드 불가 (일반/치트 공통)
-            // 치트 모드여도 첫 롤 전에는 홀드 의미 없음
             if (!isCheatMode && rollsLeft === 3) return; 
-            // 치트 모드는 rollsLeft가 줄지 않지만, 초기값인지 확인 필요하나 
-            // 여기서는 편의상 그냥 둠. 대신 굴리는 중엔 불가.
             if (isRolling) return;
 
             held[index] = !held[index];
@@ -357,10 +381,8 @@
 
         function updateUIState() {
              const rollsSpan = document.getElementById('rolls-left');
-             
-             // 치트 모드 UI 처리
              if (isCheatMode) {
-                 rollsSpan.innerHTML = "<span style='font-size:24px;'>&#8734;</span>"; // 무한대 기호
+                 rollsSpan.innerHTML = "<span style='font-size:24px;'>&#8734;</span>";
              } else {
                  rollsSpan.innerText = rollsLeft;
              }
@@ -368,18 +390,18 @@
              const rollBtn = document.getElementById('roll-btn');
              if(rollBtn.onclick === initGame) return; 
 
-             // 버튼 텍스트 및 활성화 상태
+             // JS에서 직접 style.background를 주지 않고 class로 제어하도록 수정
              if (!isCheatMode && rollsLeft === 0) {
-                 rollBtn.disabled = true; rollBtn.innerText = "점수를 선택하세요 👇"; rollBtn.style.backgroundColor = "#95a5a6";
+                 rollBtn.disabled = true; rollBtn.innerText = "점수를 선택하세요 👇"; 
+                 // disabled 상태는 CSS에서 처리되므로 별도 스타일 불필요
              } else {
                  rollBtn.disabled = false; 
-                 // 치트 모드일 땐 항상 '굴리기'
                  if (isCheatMode) {
                      rollBtn.innerText = "무한 굴리기! 😈";
-                     rollBtn.style.backgroundColor = "#e74c3c"; // 붉은색
+                     rollBtn.classList.add('btn-cheat'); // 치트 스타일 클래스
                  } else {
                      rollBtn.innerText = rollsLeft === 3 ? "주사위 굴리기!" : "다시 굴리기"; 
-                     rollBtn.style.backgroundColor = "#f39c12";
+                     rollBtn.classList.remove('btn-cheat');
                  }
              }
         }
@@ -451,7 +473,6 @@
 
         function selectCategory(catId) {
             if (isRolling) return;
-            // 치트 모드일 땐 0점 확인 패스할까 하다가, 그래도 실수는 방지
             if (!isCheatMode && rollsLeft === 3 && !confirm("한 번도 안 굴리고 0점을 선택하시겠습니까?")) return;
 
             const score = calculateScore(catId, dice);
@@ -499,10 +520,11 @@
              
              rollBtn.disabled = false;
              rollBtn.innerText = "🔄 게임 다시 시작";
-             rollBtn.style.backgroundColor = "#27ae60"; 
+             // 재시작 스타일 클래스 추가
+             rollBtn.classList.remove('btn-cheat');
+             rollBtn.classList.add('btn-restart');
              rollBtn.onclick = initGame; 
 
-             // 엔딩 메시지 분기 (치트 vs 정상)
              let msg = `수고하셨습니다!\n최종 점수: ${finalScore}`;
              if (isCheatMode) {
                  msg = `양심에 털이 나셨네요! 🦍\n최종 점수: ${finalScore} (치트 사용됨)`;
