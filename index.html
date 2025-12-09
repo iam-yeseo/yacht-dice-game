@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>야추 다이스 v3.2 (Cheat Mode)</title>
+    <style>
+        :root {
+            --die-size: 60px;
+            --pip-size: 13px;
+            --bg-color: #2c3e50; /* 기본 배경 */
+            --cheat-bg-color: #222222; /* 치트 배경 */
+            --hold-color: #e74c3c;
+            --accent-color: #f1c40f;
+            --bonus-color: #2ecc71;
+        }
+        body { 
+            font-family: 'Apple SD Gothic Neo', sans-serif; 
+            background-color: var(--bg-color); 
+            color: white; 
+            display: flex; flex-direction: column; align-items: center; 
+            min-height: 100vh; margin: 0; padding-bottom: 50px; 
+            transition: background-color 1s ease; /* 배경색 변경 애니메이션 */
+        }
+        h1 { margin-top: 20px; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        
+        /* --- 주사위 스타일 --- */
+        .dice-section { display: flex; gap: 15px; margin: 20px 0; justify-content: center; }
+        .die-wrapper { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .die-face {
+            width: var(--die-size); height: var(--die-size); background-color: white; border-radius: 12px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.2);
+            border: 4px solid transparent; cursor: pointer; user-select: none;
+            display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+            padding: 4px; box-sizing: border-box; transition: transform 0.15s, border-color 0.2s;
+        }
+        .pip { background-color: #333; border-radius: 50%; width: var(--pip-size); height: var(--pip-size); align-self: center; justify-self: center; opacity: 0; transition: opacity 0.1s; }
+        
+        /* 점 위치 */
+        .top-left { grid-area: 1 / 1; } .top-center { grid-area: 1 / 2; } .top-right { grid-area: 1 / 3; }
+        .mid-left { grid-area: 2 / 1; } .center { grid-area: 2 / 2; }    .mid-right { grid-area: 2 / 3; }
+        .bot-left { grid-area: 3 / 1; } .bot-center { grid-area: 3 / 2; } .bot-right { grid-area: 3 / 3; }
+        .face-1 .center { opacity: 1; }
+        .face-2 .top-right, .face-2 .bot-left { opacity: 1; }
+        .face-3 .top-right, .face-3 .center, .face-3 .bot-left { opacity: 1; }
+        .face-4 .top-left, .face-4 .top-right, .face-4 .bot-left, .face-4 .bot-right { opacity: 1; }
+        .face-5 .top-left, .face-5 .top-right, .face-5 .center, .face-5 .bot-left, .face-5 .bot-right { opacity: 1; }
+        .face-6 .top-left, .face-6 .top-right, .face-6 .mid-left, .face-6 .mid-right, .face-6 .bot-left, .face-6 .bot-right { opacity: 1; }
+
+        .die-face.held { border-color: var(--hold-color); background-color: #ecf0f1; transform: translateY(-8px); box-shadow: 0 10px 15px rgba(0,0,0,0.3); }
+        .die-number { font-weight: bold; color: #ecf0f1; font-size: 15px; }
+        @keyframes shake { 0% { transform: rotate(0deg); } 25% { transform: rotate(10deg); } 50% { transform: rotate(-10deg); } 75% { transform: rotate(10deg); } 100% { transform: rotate(0deg); } }
+        .die-face.rolling { animation: shake 0.2s infinite linear; }
+
+        /* --- 아이콘 --- */
+        .mini-die {
+            display: inline-grid; width: 24px; height: 24px; background-color: #ecf0f1; border: 1px solid #bdc3c7; border-radius: 4px;
+            grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); margin-right: 10px; vertical-align: middle;
+        }
+        .mini-pip { background-color: #7f8c8d; width: 4px; height: 4px; border-radius: 50%; align-self: center; justify-self: center; }
+
+        /* --- 컨트롤 --- */
+        .controls { margin-bottom: 20px; text-align: center; }
+        button#roll-btn {
+            padding: 12px 35px; font-size: 20px; cursor: pointer; background-color: #f39c12; border: none; border-radius: 50px; color: white;
+            box-shadow: 0 5px #d35400; transition: all 0.1s; font-weight: bold; min-width: 200px;
+        }
+        button#roll-btn:active { transform: translateY(3px); box-shadow: 0 2px #d35400; }
+        button#roll-btn:disabled { background-color: #95a5a6; cursor: not-allowed; box-shadow: none; }
+        .info { margin-top: 15px; font-size: 17px; color: #bdc3c7; }
+        #rolls-left { color: var(--accent-color); font-weight: bold; font-size: 22px; margin-left: 5px;}
+
+        /* --- 점수판 (테이블) --- */
+        table { border-collapse: separate; border-spacing: 0; width: 380px; background-color: white; color: #2c3e50; border-radius: 12px; overflow: visible; box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin-bottom: 20px; }
+        
+        tr { height: 48px; }
+        th, td { padding: 0 15px; text-align: center; border-bottom: 1px solid #eee; vertical-align: middle; }
+        th { background-color: #34495e; color: white; font-weight: normal; letter-spacing: 1px; height: 40px; }
+        
+        td.category { text-align: left; font-weight: 600; font-size: 15px; display: flex; align-items: center; height: 48px; position: relative; cursor: default; }
+        
+        .score-btn { 
+            width: 100%; height: 32px; padding: 0; 
+            background: #f8f9fa; border: 2px dashed #bdc3c7; border-radius: 6px; 
+            cursor: pointer; color: #95a5a6; font-weight: bold; font-family: inherit; font-size: 14px; 
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .score-btn:hover:not(:disabled) { background-color: #e1e8ed; border-color: #3498db; color: #3498db; }
+        .score-filled { font-weight: 800; color: #2c3e50; font-size: 18px; }
+
+        /* 상단 합계 (프로그레스바) */
+        .subtotal-row td {
+            border-top: 2px solid #bdc3c7; border-bottom: 2px solid #bdc3c7; 
+            font-weight: bold; font-size: 14px; color: #7f8c8d;
+            background-color: transparent !important; 
+        }
+        .subtotal-row { background-color: #f8f9fa; transition: background 0.3s ease; }
+
+        /* 보너스 달성 애니메이션 */
+        @keyframes bonusPulse {
+            0% { background-color: #2ecc71; transform: scale(1); }
+            50% { background-color: #27ae60; transform: scale(1.02); }
+            100% { background-color: #2ecc71; transform: scale(1); }
+        }
+        .bonus-achieved td { color: white !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); border-color: #27ae60 !important; }
+        .bonus-achieved { animation: bonusPulse 2s infinite; }
+
+        /* 툴팁 */
+        td.category[data-desc]:hover::after {
+            content: attr(data-desc);
+            position: absolute; left: 10px; bottom: 40px; 
+            background-color: rgba(0, 0, 0, 0.9); color: white;
+            padding: 8px 12px; border-radius: 6px;
+            font-size: 13px; font-weight: normal; white-space: nowrap;
+            z-index: 100; pointer-events: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            opacity: 0; animation: fadeIn 0.2s forwards;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 총점 */
+        .total-row td { background-color: var(--accent-color); color: #c0392b; font-weight: 900; font-size: 20px; border-top: 3px solid #e67e22; }
+
+        /* 하단 재시작 버튼 */
+        .restart-btn { background: transparent; border: 1px solid #7f8c8d; color: #95a5a6; padding: 8px 16px; border-radius: 20px; cursor: pointer; margin-top: 10px; }
+        .restart-btn:hover { background: #e74c3c; border-color: #e74c3c; color: white; }
+
+        /* 치트 트리거 (양심에 찔리기) */
+        .cheat-trigger {
+            margin-top: 20px; font-size: 11px; color: #444; 
+            cursor: pointer; text-decoration: none; opacity: 0.5; transition: opacity 0.3s;
+        }
+        .cheat-trigger:hover { opacity: 1; color: #e74c3c; font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+    <h1 id="game-title">🎲 야추 다이스</h1>
+
+    <div class="dice-section" id="dice-container"></div>
+
+    <div class="controls">
+        <button id="roll-btn" onclick="startRollAnimation()">주사위 굴리기!</button>
+        <div class="info">남은 횟수: <span id="rolls-left">3</span></div>
+    </div>
+
+    <table>
+        <thead>
+            <tr><th width="65%">족보 (Categories)</th><th width="35%">점수</th></tr>
+        </thead>
+        <tbody id="score-table"></tbody>
+        <tfoot>
+            <tr class="total-row"><td>총점 (Total)</td><td id="grand-total">0</td></tr>
+        </tfoot>
+    </table>
+
+    <div class="restart-container">
+        <button class="restart-btn" onclick="confirmRestart()">🔄 게임 다시 시작</button>
+    </div>
+
+    <div class="cheat-trigger" id="cheat-trigger" onclick="activateCheatMode()">양심에 찔리기</div>
+
+    <script>
+        let dice = [1, 1, 1, 1, 1];
+        let held = [false, false, false, false, false];
+        let rollsLeft = 3;
+        let scores = {};
+        let isRolling = false; 
+        let animationInterval = null;
+        
+        // 치트 모드 상태 변수
+        let isCheatMode = false;
+
+        const categories = [
+            { id: 'ones', name: 'Aces (1의 합)', iconValue: 1 },
+            { id: 'twos', name: 'Deuces (2의 합)', iconValue: 2 },
+            { id: 'threes', name: 'Threes (3의 합)', iconValue: 3 },
+            { id: 'fours', name: 'Fours (4의 합)', iconValue: 4 },
+            { id: 'fives', name: 'Fives (5의 합)', iconValue: 5 },
+            { id: 'sixes', name: 'Sixes (6의 합)', iconValue: 6 },
+            { id: 'choice', name: 'Choice (전체 합)', iconValue: 0, desc: '주사위 5개의 총합 (조건 없음)' },
+            { id: 'fourkind', name: '4 of a Kind', iconValue: 0, desc: '동일한 주사위 4개 이상 (총합 점수)' },
+            { id: 'fullhouse', name: 'Full House', iconValue: 0, desc: '3개 동일 + 2개 동일 (총합 점수)' },
+            { id: 's_straight', name: 'Small Straight', iconValue: 0, desc: '연속된 주사위 4개 (15점)' },
+            { id: 'l_straight', name: 'Large Straight', iconValue: 0, desc: '연속된 주사위 5개 (30점)' },
+            { id: 'yacht', name: '⭐️ YACHT ⭐️', iconValue: 0, desc: '주사위 5개 모두 동일 (50점)' }
+        ];
+
+        function initGame() {
+            dice = [1, 1, 1, 1, 1];
+            scores = {};
+            isRolling = false;
+            
+            // 치트 모드 초기화 (게임 재시작 시 정상으로 복구)
+            isCheatMode = false;
+            document.body.style.backgroundColor = "var(--bg-color)";
+            document.getElementById('game-title').innerText = "🎲 야추 다이스";
+            document.getElementById('cheat-trigger').style.display = 'block'; // 버튼 다시 보이기
+
+            // 버튼 상태 초기화
+            const rollBtn = document.getElementById('roll-btn');
+            rollBtn.innerText = "주사위 굴리기!";
+            rollBtn.disabled = false;
+            rollBtn.onclick = startRollAnimation;
+            rollBtn.style.backgroundColor = "#f39c12";
+
+            createDiceElements(); 
+            createScoreTable();   
+            resetTurn();
+            updateTotalScore(); 
+        }
+
+        // --- 치트 모드 활성화 함수 ---
+        function activateCheatMode() {
+            if (isCheatMode) return;
+            if (!confirm("정말 양심을 버리시겠습니까?\n이 모드에서는 주사위를 무한으로 굴릴 수 있습니다.\n(다시는 되돌릴 수 없습니다!)")) return;
+            
+            isCheatMode = true;
+            document.body.style.backgroundColor = "var(--cheat-bg-color)"; // 배경 변경 (#222222)
+            document.getElementById('cheat-trigger').style.display = 'none'; // 트리거 숨김
+            document.getElementById('game-title').innerText = "😈 타락한 야추 다이스";
+            
+            updateUIState();
+        }
+
+        function createDiceElements() {
+            const container = document.getElementById('dice-container');
+            container.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'die-wrapper';
+                const dieFace = document.createElement('div');
+                dieFace.className = `die-face face-${dice[i]}`; 
+                dieFace.id = `die-face-${i}`;
+                dieFace.onclick = () => toggleHold(i);
+                
+                ['top-left', 'top-center', 'top-right', 'mid-left', 'center', 'mid-right', 'bot-left', 'bot-center', 'bot-right'].forEach(pos => {
+                    const pip = document.createElement('div');
+                    pip.className = `pip ${pos}`;
+                    dieFace.appendChild(pip);
+                });
+                
+                const dieNumber = document.createElement('div');
+                dieNumber.className = 'die-number';
+                dieNumber.id = `die-num-${i}`;
+                dieNumber.innerText = dice[i];
+                wrapper.appendChild(dieFace); wrapper.appendChild(dieNumber); container.appendChild(wrapper);
+            }
+        }
+
+        function getMiniDieHTML(value) {
+            let pipsHTML = '';
+            const config = {
+                0: [], 1: ['center'], 2: ['top-right', 'bot-left'], 3: ['top-right', 'center', 'bot-left'],
+                4: ['top-left', 'top-right', 'bot-left', 'bot-right'], 5: ['top-left', 'top-right', 'center', 'bot-left', 'bot-right'],
+                6: ['top-left', 'top-right', 'mid-left', 'mid-right', 'bot-left', 'bot-right']
+            };
+            (config[value] || []).forEach(pos => { pipsHTML += `<div class="mini-pip ${pos}"></div>`; });
+            return `<div class="mini-die">${pipsHTML}</div>`;
+        }
+
+        function createScoreTable() {
+            const tbody = document.getElementById('score-table');
+            tbody.innerHTML = '';
+            categories.forEach((cat, index) => {
+                if (index === 6) {
+                    const subRow = document.createElement('tr');
+                    subRow.className = 'subtotal-row';
+                    subRow.id = 'subtotal-row'; 
+                    subRow.innerHTML = `
+                        <td style="text-align:right;">상단 합계 (63점 이상 +35)</td>
+                        <td id="upper-subtotal-cell">0 / 63</td>
+                    `;
+                    tbody.appendChild(subRow);
+                }
+
+                const tr = document.createElement('tr');
+                const iconHTML = getMiniDieHTML(cat.iconValue);
+                const tooltipAttr = cat.desc ? `data-desc="${cat.desc}"` : '';
+                
+                tr.innerHTML = `
+                    <td class="category" ${tooltipAttr}>${iconHTML} <span>${cat.name}</span></td>
+                    <td><button class="score-btn" id="btn-${cat.id}" onclick="selectCategory('${cat.id}')">-</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function resetTurn() {
+            rollsLeft = 3;
+            held = [false, false, false, false, false];
+            updateUIState();
+            renderDiceVisuals(); 
+            updateScorePreview(true);
+        }
+
+        function confirmRestart() {
+            if (confirm("정말 다시 시작하시겠습니까?\n(치트 모드도 초기화됩니다)")) {
+                if (animationInterval) clearInterval(animationInterval);
+                initGame();
+            }
+        }
+
+        function startRollAnimation() {
+            // 치트 모드일 땐 횟수 제한 없음, 일반 모드일 땐 0이면 불가
+            if (isRolling) return;
+            if (!isCheatMode && rollsLeft <= 0) return;
+
+            isRolling = true;
+            document.getElementById('roll-btn').disabled = true;
+            
+            // 치트 모드가 아닐 때만 횟수 차감
+            if (!isCheatMode) {
+                rollsLeft--;
+            }
+
+            updateUIState();
+            updateScorePreview(true); 
+            let frames = 0;
+            dice.forEach((_, i) => { if (!held[i]) document.getElementById(`die-face-${i}`).classList.add('rolling'); });
+            animationInterval = setInterval(() => {
+                dice.forEach((_, i) => { if (!held[i]) dice[i] = Math.floor(Math.random() * 6) + 1; });
+                renderDiceVisuals(); frames++;
+                if (frames >= 15) { clearInterval(animationInterval); finishRoll(); }
+            }, 60); 
+        }
+
+        function finishRoll() {
+            dice.forEach((_, i) => {
+                if (!held[i]) dice[i] = Math.floor(Math.random() * 6) + 1;
+                document.getElementById(`die-face-${i}`).classList.remove('rolling');
+            });
+            renderDiceVisuals(); updateScorePreview(false); isRolling = false;
+            
+            // 굴리기 완료 후 버튼 활성화 로직
+            const rollBtn = document.getElementById('roll-btn');
+            if (isCheatMode || rollsLeft > 0) {
+                rollBtn.disabled = false;
+            } else {
+                rollBtn.disabled = true; // 일반 모드이고 0회면 비활성
+            }
+        }
+
+        function toggleHold(index) {
+            // 아직 한 번도 안 굴렸으면 홀드 불가 (일반/치트 공통)
+            // 치트 모드여도 첫 롤 전에는 홀드 의미 없음
+            if (!isCheatMode && rollsLeft === 3) return; 
+            // 치트 모드는 rollsLeft가 줄지 않지만, 초기값인지 확인 필요하나 
+            // 여기서는 편의상 그냥 둠. 대신 굴리는 중엔 불가.
+            if (isRolling) return;
+
+            held[index] = !held[index];
+            renderDiceVisuals();
+        }
+
+        function updateUIState() {
+             const rollsSpan = document.getElementById('rolls-left');
+             
+             // 치트 모드 UI 처리
+             if (isCheatMode) {
+                 rollsSpan.innerHTML = "<span style='font-size:24px;'>&#8734;</span>"; // 무한대 기호
+             } else {
+                 rollsSpan.innerText = rollsLeft;
+             }
+
+             const rollBtn = document.getElementById('roll-btn');
+             if(rollBtn.onclick === initGame) return; 
+
+             // 버튼 텍스트 및 활성화 상태
+             if (!isCheatMode && rollsLeft === 0) {
+                 rollBtn.disabled = true; rollBtn.innerText = "점수를 선택하세요 👇"; rollBtn.style.backgroundColor = "#95a5a6";
+             } else {
+                 rollBtn.disabled = false; 
+                 // 치트 모드일 땐 항상 '굴리기'
+                 if (isCheatMode) {
+                     rollBtn.innerText = "무한 굴리기! 😈";
+                     rollBtn.style.backgroundColor = "#e74c3c"; // 붉은색
+                 } else {
+                     rollBtn.innerText = rollsLeft === 3 ? "주사위 굴리기!" : "다시 굴리기"; 
+                     rollBtn.style.backgroundColor = "#f39c12";
+                 }
+             }
+        }
+
+        function renderDiceVisuals() {
+            dice.forEach((val, i) => {
+                const face = document.getElementById(`die-face-${i}`);
+                const num = document.getElementById(`die-num-${i}`);
+                face.classList.remove('face-1', 'face-2', 'face-3', 'face-4', 'face-5', 'face-6');
+                face.classList.add(`face-${val}`);
+                if (held[i]) face.classList.add('held'); else face.classList.remove('held');
+                num.innerText = val;
+            });
+        }
+
+        function calculateScore(category, currentDice) {
+            const counts = {};
+            currentDice.forEach(d => { counts[d] = (counts[d] || 0) + 1; });
+            const values = Object.values(counts);
+            const keys = Object.keys(counts).map(Number).sort((a,b)=>a-b);
+            const sum = currentDice.reduce((a,b)=>a+b, 0);
+
+            switch(category) {
+                case 'ones': return (counts[1] || 0) * 1;
+                case 'twos': return (counts[2] || 0) * 2;
+                case 'threes': return (counts[3] || 0) * 3;
+                case 'fours': return (counts[4] || 0) * 4;
+                case 'fives': return (counts[5] || 0) * 5;
+                case 'sixes': return (counts[6] || 0) * 6;
+                case 'choice': return sum;
+                case 'fourkind': return values.some(v => v >= 4) ? sum : 0;
+                case 'fullhouse': return (values.includes(3) && values.includes(2)) || values.includes(5) ? sum : 0;
+                case 's_straight': 
+                    let maxStraight = 0; let currentStraight = 0;
+                    const uniqueKeys = [...new Set(keys)];
+                    for(let i=0; i<uniqueKeys.length; i++) {
+                        if(i>0 && uniqueKeys[i] === uniqueKeys[i-1]+1) currentStraight++; else currentStraight = 1;
+                        maxStraight = Math.max(maxStraight, currentStraight);
+                    }
+                    return maxStraight >= 4 ? 15 : 0;
+                case 'l_straight':
+                     let l_straight = 0; const uKeysL = [...new Set(keys)];
+                     for(let i=0; i<uKeysL.length; i++) { if(i>0 && uKeysL[i] === uKeysL[i-1]+1) l_straight++; else l_straight = 1; }
+                     return l_straight >= 5 ? 30 : 0;
+                case 'yacht': return values.includes(5) ? 50 : 0;
+                default: return 0;
+            }
+        }
+
+        function updateScorePreview(clear) {
+            categories.forEach(cat => {
+                if (scores[cat.id] !== undefined) return;
+                const btn = document.getElementById(`btn-${cat.id}`);
+                if (clear) {
+                    btn.innerText = "-"; btn.disabled = true;
+                    btn.style.color = "#95a5a6"; btn.style.borderColor = "#bdc3c7"; btn.style.backgroundColor = "#f8f9fa";
+                } else {
+                    const potentialScore = calculateScore(cat.id, dice);
+                    btn.innerText = potentialScore > 0 ? `+${potentialScore}` : '0';
+                    btn.disabled = false;
+                    if(potentialScore > 0) {
+                        btn.style.color = "#2980b9"; btn.style.borderColor = "#3498db"; btn.style.backgroundColor = "#ebf5fb";
+                    } else {
+                        btn.style.color = "#95a5a6"; btn.style.borderColor = "#bdc3c7"; btn.style.backgroundColor = "#f8f9fa";
+                    }
+                }
+            });
+        }
+
+        function selectCategory(catId) {
+            if (isRolling) return;
+            // 치트 모드일 땐 0점 확인 패스할까 하다가, 그래도 실수는 방지
+            if (!isCheatMode && rollsLeft === 3 && !confirm("한 번도 안 굴리고 0점을 선택하시겠습니까?")) return;
+
+            const score = calculateScore(catId, dice);
+            scores[catId] = score;
+
+            const btn = document.getElementById(`btn-${catId}`);
+            btn.parentElement.innerHTML = `<span class="score-filled">${score}</span>`;
+            updateTotalScore();
+            if (Object.keys(scores).length === categories.length) endGame();
+            else resetTurn();
+        }
+
+        function updateTotalScore() {
+            let upperSum = 0;
+            ['ones','twos','threes','fours','fives','sixes'].forEach(id => {
+                if (scores[id] !== undefined) upperSum += scores[id];
+            });
+
+            const subRow = document.getElementById('subtotal-row');
+            const subtotalCell = document.getElementById('upper-subtotal-cell');
+            
+            if (upperSum >= 63) {
+                subtotalCell.innerHTML = `${upperSum} / 63 (+35 Bonus!)`;
+                subRow.className = 'subtotal-row bonus-achieved';
+                subRow.style.background = ''; 
+            } else {
+                subtotalCell.innerHTML = `${upperSum} / 63`;
+                subRow.className = 'subtotal-row';
+                const percent = Math.min((upperSum / 63) * 100, 100);
+                subRow.style.background = `linear-gradient(to right, #ffeaa7 ${percent}%, #f8f9fa ${percent}%)`;
+            }
+
+            let total = upperSum;
+            if (upperSum >= 63) total += 35;
+            ['choice','fourkind','fullhouse','s_straight','l_straight','yacht'].forEach(id => {
+                if(scores[id] !== undefined) total += scores[id];
+            });
+            
+            document.getElementById('grand-total').innerText = total;
+        }
+        
+        function endGame() {
+            const finalScore = document.getElementById('grand-total').innerText;
+             const rollBtn = document.getElementById('roll-btn');
+             
+             rollBtn.disabled = false;
+             rollBtn.innerText = "🔄 게임 다시 시작";
+             rollBtn.style.backgroundColor = "#27ae60"; 
+             rollBtn.onclick = initGame; 
+
+             // 엔딩 메시지 분기 (치트 vs 정상)
+             let msg = `수고하셨습니다!\n최종 점수: ${finalScore}`;
+             if (isCheatMode) {
+                 msg = `양심에 털이 나셨네요! 🦍\n최종 점수: ${finalScore} (치트 사용됨)`;
+             }
+
+             setTimeout(() => alert(msg), 200);
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
